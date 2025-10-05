@@ -1,0 +1,1 @@
+async function search(){ const q = document.getElementById('q').value; const res = await fetch('/api/search?q='+encodeURIComponent(q)); const data = await res.json(); const out = document.getElementById('results'); out.innerHTML = data.map(b=>`<div class="book"><strong>${b.title}</strong><br/>${b.author}</div>`).join('\n'); }

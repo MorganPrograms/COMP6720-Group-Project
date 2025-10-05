@@ -1,0 +1,32 @@
+{
+  "collection": "ebooks",
+  "schema": {
+    "_id": "ObjectId",
+    "title": "string",
+    "author": "string",
+    "description": "string",
+    "tags": [
+      "string"
+    ],
+    "published_date": "ISODate",
+    "popularity": "int",
+    "tier": "string (regular|premium)"
+  },
+  "indexes": [
+    {
+      "fields": [
+        "title",
+        "author",
+        "description",
+        "tags"
+      ],
+      "type": "text"
+    },
+    {
+      "fields": [
+        "popularity"
+      ],
+      "type": "desc"
+    }
+  ]
+}
