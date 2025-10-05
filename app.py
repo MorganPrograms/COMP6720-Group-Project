@@ -1,109 +1,144 @@
-import os
-import jwt
-import bcrypt
-import redis
-import datetime
-from flask import Flask, request, jsonify
+import os, json, datetime
+from flask import Flask, request, jsonify, render_template, redirect
 from flask_sqlalchemy import SQLAlchemy
 from mongoengine import connect
 from neo4j import GraphDatabase
-
+from db.mysql_connection import db
+from db.redis_client import get_redis
+from mongo.mongo import Ebook
+from config import Config
 from dotenv import load_dotenv
 load_dotenv()
 
-app = Flask(__name__)
+app = Flask(__name__, template_folder='templates', static_folder='static')
+app.config['SQLALCHEMY_DATABASE_URI'] = Config.MYSQL_URI
+db.init_app(app)
+with app.app_context():
+    db.create_all()
 
-# MySQL setup
-app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv("MYSQL_URI")
-db = SQLAlchemy(app)
+# Mongo
+connect(host=Config.MONGO_URI)
+
+# Redis
+redis_client = get_redis()
+
+# Neo4j
+driver = GraphDatabase.driver(Config.NEO4J_URI, auth=(Config.NEO4J_USER, Config.NEO4J_PASSWORD))
+
+JWT_SECRET = Config.JWT_SECRET
+
+def create_jwt(payload):
+    import jwt
+    return jwt.encode(payload, JWT_SECRET, algorithm='HS256')
+
+def decode_jwt(token):
+    import jwt
+    return jwt.decode(token, JWT_SECRET, algorithms=['HS256'])
 
 class User(db.Model):
+    __tablename__ = 'users'
     user_id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(100), unique=True, nullable=False)
     email = db.Column(db.String(150), unique=True, nullable=False)
     password_hash = db.Column(db.String(255), nullable=False)
-    subscription_tier = db.Column(db.Enum('regular', 'premium'), default='regular')
+    subscription_tier = db.Column(db.Enum('regular','premium'), default='regular')
 
-class UserBook(db.Model):
+class UserBooks(db.Model):
+    __tablename__ = 'user_books'
     id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey('user.user_id'), nullable=False)
+    user_id = db.Column(db.Integer, nullable=False)
     book_mongo_id = db.Column(db.String(24), nullable=False)
 
-# Mongo setup
-from models.mongo import Ebook
-connect(host=os.getenv("MONGO_URI"))
+@app.route('/')
+def index():
+    return render_template('index.html')
 
-# Redis setup
-redis_client = redis.from_url(os.getenv("REDIS_URI"))
+@app.route('/signup', methods=['GET'])
+def signup_page():
+    return render_template('signup.html')
 
-# Neo4j setup
-driver = GraphDatabase.driver(os.getenv("NEO4J_URI"), auth=(os.getenv("NEO4J_USER"), os.getenv("NEO4J_PASSWORD")))
+@app.route('/login', methods=['GET'])
+def login_page():
+    return render_template('login.html')
 
-JWT_SECRET = os.getenv("JWT_SECRET")
+@app.route('/dashboard', methods=['GET'])
+def dashboard_page():
+    return render_template('dashboard.html')
 
-def create_jwt(payload):
-    return jwt.encode(payload, JWT_SECRET, algorithm="HS256")
+@app.route('/search_page', methods=['GET'])
+def search_page():
+    return render_template('search.html')
 
-def decode_jwt(token):
-    return jwt.decode(token, JWT_SECRET, algorithms=["HS256"])
+@app.route('/api/signup', methods=['POST'])
+def api_signup():
+    data = request.get_json() or request.form
+    username = data.get('username')
+    email = data.get('email')
+    password = data.get('password')
+    tier = data.get('tier','regular')
+    if not (username and email and password):
+        return jsonify({'error':'missing fields'}), 400
+    import bcrypt
+    pw = bcrypt.hashpw(password.encode(), bcrypt.gensalt()).decode()
+    user = User(username=username, email=email, password_hash=pw, subscription_tier=tier)
+    db.session.add(user); db.session.commit()
+    with driver.session() as s:
+        s.run('MERGE (u:User {userId:$id, username:$username})', id=str(user.user_id), username=user.username)
+    token = create_jwt({'user_id': user.user_id, 'tier': user.subscription_tier, 'exp': datetime.datetime.utcnow().timestamp()+3600})
+    redis_client.setex(f'session:{user.user_id}', 3600, token)
+    return jsonify({'token': token})
 
-@app.route("/signup", methods=["POST"])
-def signup():
-    data = request.json
-    hashed = bcrypt.hashpw(data['password'].encode(), bcrypt.gensalt())
-    user = User(username=data['username'], email=data['email'], password_hash=hashed)
-    db.session.add(user)
-    db.session.commit()
-    with driver.session() as session:
-        session.run("MERGE (u:User {userId: $id, username: $username})", id=user.user_id, username=user.username)
-    return jsonify({"message": "User created"})
+@app.route('/api/login', methods=['POST'])
+def api_login():
+    data = request.get_json() or request.form
+    email = data.get('email'); password = data.get('password')
+    user = User.query.filter_by(email=email).first()
+    if not user:
+        return jsonify({'error':'invalid'}), 401
+    import bcrypt
+    if not bcrypt.checkpw(password.encode(), user.password_hash.encode()):
+        return jsonify({'error':'invalid'}), 401
+    token = create_jwt({'user_id': user.user_id, 'tier': user.subscription_tier, 'exp': datetime.datetime.utcnow().timestamp()+3600})
+    redis_client.setex(f'session:{user.user_id}', 3600, token)
+    return jsonify({'token': token})
 
-@app.route("/login", methods=["POST"])
-def login():
-    data = request.json
-    user = User.query.filter_by(email=data['email']).first()
-    if not user or not bcrypt.checkpw(data['password'].encode(), user.password_hash.encode()):
-        return jsonify({"error": "Invalid credentials"}), 401
-    token = create_jwt({"user_id": user.user_id, "tier": user.subscription_tier, "exp": datetime.datetime.utcnow() + datetime.timedelta(hours=1)})
-    redis_client.setex(f"session:{user.user_id}", 3600, token)
-    return jsonify({"token": token})
+@app.route('/api/search', methods=['GET'])
+def api_search():
+    q = request.args.get('q','')
+    tier = request.args.get('tier','regular')
+    if tier not in ('regular','premium'): tier = 'regular'
+    qs = Ebook.objects(__raw__={ "$or":[ {"title":{"$regex":q,"$options":"i"}}, {"author":{"$regex":q,"$options":"i"}}, {"description":{"$regex":q,"$options":"i"}}, {"tags":{"$regex":q,"$options":"i"}} ] })
+    results = []
+    for b in qs:
+        if b.tier == 'premium' and tier!='premium':
+            continue
+        results.append({'id': str(b.id), 'title': b.title, 'author': b.author, 'tier': b.tier})
+    return jsonify(results[:50])
 
-@app.route("/search", methods=["GET"])
-def search():
-    q = request.args.get("q", "")
-    tier = request.args.get("tier", "regular")
-    books = Ebook.objects(tier__in=[tier, "regular"], title__icontains=q)
-    return jsonify([{ "id": str(b.id), "title": b.title, "author": b.author } for b in books])
+@app.route('/api/choose', methods=['POST'])
+def api_choose():
+    data = request.get_json() or request.form
+    user_id = data.get('user_id'); book_id = data.get('book_id')
+    if not (user_id and book_id): return jsonify({'error':'missing'}), 400
+    rec = UserBooks(user_id=user_id, book_mongo_id=book_id); db.session.add(rec); db.session.commit()
+    Ebook.objects(id=book_id).update_one(inc__popularity=1)
+    with driver.session() as s:
+        s.run('MERGE (b:Book {mongoId:$mid}) MERGE (u:User {userId:$uid}) MERGE (u)-[:CHOSEN {at: datetime()}]->(b)', mid=book_id, uid=str(user_id))
+    return jsonify({'ok':True})
 
-@app.route("/choose", methods=["POST"])
-def choose():
-    data = request.json
-    user_id, book_id = data['user_id'], data['book_id']
-    entry = UserBook(user_id=user_id, book_mongo_id=book_id)
-    db.session.add(entry)
-    db.session.commit()
-    book = Ebook.objects(id=book_id).first()
-    if book:
-        book.popularity += 1
-        book.save()
-    with driver.session() as session:
-        session.run("MATCH (u:User {userId: $uid}), (b:Book {mongoId: $bid}) MERGE (u)-[:CHOSEN]->(b)", uid=user_id, bid=book_id)
-    return jsonify({"message": "Book chosen"})
-
-@app.route("/recommend", methods=["GET"])
-def recommend():
-    user_id = request.args.get("user_id")
-    with driver.session() as session:
-        result = session.run("""
-            MATCH (u:User {userId: $uid})-[:CHOSEN]->(b:Book)<-[:CHOSEN]-(o:User)-[:CHOSEN]->(rec:Book)
+@app.route('/api/recommend', methods=['GET'])
+def api_recommend():
+    user_id = request.args.get('user_id')
+    if not user_id: return jsonify({'error':'missing user_id'}), 400
+    with driver.session() as s:
+        res = s.run('''
+            MATCH (u:User {userId: $uid})-[:CHOSEN]->(b:Book)<-[:CHOSEN]-(other:User)-[:CHOSEN]->(rec:Book)
             WHERE NOT (u)-[:CHOSEN]->(rec)
-            RETURN rec.mongoId AS book_id, COUNT(*) AS score
-            ORDER BY score DESC LIMIT 5
-        """, uid=int(user_id))
-        recs = [record["book_id"] for record in result]
-    books = Ebook.objects(id__in=recs)
-    return jsonify([{ "id": str(b.id), "title": b.title } for b in books])
+            RETURN rec.mongoId AS id, COUNT(*) AS score ORDER BY score DESC LIMIT 10
+        ''', uid=str(user_id))
+        ids = [r['id'] for r in res]
+    books = Ebook.objects(id__in=ids)
+    return jsonify([{'id':str(b.id),'title':b.title,'author':b.author} for b in books])
 
-if __name__ == "__main__":
-    db.create_all()
-    app.run(debug=True)
+if __name__ == '__main__':
+    app.run(port=Config.PORT, debug=True)

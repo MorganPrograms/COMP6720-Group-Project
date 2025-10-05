@@ -1,0 +1,50 @@
+{
+  "info": {
+    "name": "Polyglot Ebook Demo",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Signup",
+      "request": {
+        "method": "POST",
+        "header": [],
+        "body": {
+          "mode": "raw",
+          "raw": "{\\n  \"username\":\"demo\",\\n  \"email\":\"demo@example.com\",\\n  \"password\":\"password\"\\n}"
+        },
+        "url": {
+          "raw": "http://localhost:5000/api/signup",
+          "host": [
+            "http://localhost:5000"
+          ],
+          "path": [
+            "api",
+            "signup"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Login",
+      "request": {
+        "method": "POST",
+        "header": [],
+        "body": {
+          "mode": "raw",
+          "raw": "{\\n  \"email\":\"demo@example.com\",\\n  \"password\":\"password\"\\n}"
+        },
+        "url": {
+          "raw": "http://localhost:5000/api/login",
+          "host": [
+            "http://localhost:5000"
+          ],
+          "path": [
+            "api",
+            "login"
+          ]
+        }
+      }
+    }
+  ]
+}
