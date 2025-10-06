@@ -140,5 +140,16 @@ def api_recommend():
     books = Ebook.objects(id__in=ids)
     return jsonify([{'id':str(b.id),'title':b.title,'author':b.author} for b in books])
 
+@app.route('/api/profile/<int:user_id>', methods=['GET'])
+def api_profile(user_id):
+    user = User.query.get(user_id)
+    if not user:
+        return jsonify({'error': 'User not found'}), 404
+    return jsonify({
+        'user_id': user.user_id'
+        'username': user.username,
+        'email': user.email,
+        'subscription_tier': user.subscription_tier
+    })
 if __name__ == '__main__':
     app.run(port=Config.PORT, debug=True)
