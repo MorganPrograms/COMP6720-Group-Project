@@ -1,144 +1,157 @@
-import os, json, datetime
-from flask import Flask, request, jsonify, render_template, redirect
-from flask_sqlalchemy import SQLAlchemy
-from mongoengine import connect
+from flask import Flask, jsonify, request
+from flask_cors import CORS
+import mysql.connector
+from pymongo import MongoClient
 from neo4j import GraphDatabase
-from db.mysql_connection import db
-from db.redis_client import get_redis
-from mongo.mongo import Ebook
-from config import Config
-from dotenv import load_dotenv
-load_dotenv()
+import redis
 
-app = Flask(__name__, template_folder='templates', static_folder='static')
-app.config['SQLALCHEMY_DATABASE_URI'] = Config.MYSQL_URI
-db.init_app(app)
-with app.app_context():
-    db.create_all()
+app = Flask(__name__)
+CORS(app)
 
-# Mongo
-connect(host=Config.MONGO_URI)
+# ------------------------------
+# Database Connections
+# ------------------------------
 
-# Redis
-redis_client = get_redis()
+# MySQL (ACID demo)
+mysql_conn = mysql.connector.connect(
+    host="localhost",
+    user="root",
+    password="",
+    database="ebook_service"
+)
+mysql_cursor = mysql_conn.cursor(dictionary=True)
+
+# MongoDB
+mongo_client = MongoClient("mongodb://localhost:27017/")
+mongo_db = mongo_client["ebooks"]
+mongo_collection = mongo_db["books"]
 
 # Neo4j
-driver = GraphDatabase.driver(Config.NEO4J_URI, auth=(Config.NEO4J_USER, Config.NEO4J_PASSWORD))
+neo4j_driver = GraphDatabase.driver("bolt://localhost:7687", auth=("neo4j", "test1234"))
 
-JWT_SECRET = Config.JWT_SECRET
+# Redis
+redis_client = redis.StrictRedis(host="localhost", port=6379, db=0, decode_responses=True)
 
-def create_jwt(payload):
-    import jwt
-    return jwt.encode(payload, JWT_SECRET, algorithm='HS256')
 
-def decode_jwt(token):
-    import jwt
-    return jwt.decode(token, JWT_SECRET, algorithms=['HS256'])
+# ------------------------------
+# Health Route
+# ------------------------------
+@app.route("/health")
+def health():
+    try:
+        mysql_cursor.execute("SELECT 1")
+        mongo_client.admin.command("ping")
+        with neo4j_driver.session() as session:
+            session.run("RETURN 1")
+        redis_client.ping()
+        return jsonify({"status": "All databases are alive ✅"}), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
-class User(db.Model):
-    __tablename__ = 'users'
-    user_id = db.Column(db.Integer, primary_key=True)
-    username = db.Column(db.String(100), unique=True, nullable=False)
-    email = db.Column(db.String(150), unique=True, nullable=False)
-    password_hash = db.Column(db.String(255), nullable=False)
-    subscription_tier = db.Column(db.Enum('regular','premium'), default='regular')
 
-class UserBooks(db.Model):
-    __tablename__ = 'user_books'
-    id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, nullable=False)
-    book_mongo_id = db.Column(db.String(24), nullable=False)
+# ------------------------------
+# MySQL Routes (CRUD + ACID)
+# ------------------------------
 
-@app.route('/')
-def index():
-    return render_template('index.html')
+@app.route("/mysql/create", methods=["POST"])
+def create_mysql():
+    data = request.get_json()
+    try:
+        mysql_cursor.execute(
+            "INSERT INTO users (name, email) VALUES (%s, %s)",
+            (data["name"], data["email"])
+        )
+        mysql_conn.commit()
+        return jsonify({"message": "User created successfully"}), 201
+    except Exception as e:
+        mysql_conn.rollback()
+        return jsonify({"error": str(e)}), 500
 
-@app.route('/signup', methods=['GET'])
-def signup_page():
-    return render_template('signup.html')
 
-@app.route('/login', methods=['GET'])
-def login_page():
-    return render_template('login.html')
+@app.route("/mysql/read", methods=["GET"])
+def read_mysql():
+    try:
+        mysql_cursor.execute("SELECT * FROM users")
+        results = mysql_cursor.fetchall()
+        print("MySQL Results:", results)  # <— add this
+        return jsonify(results), 200
+    except Exception as e:
+        print("MySQL Error:", e)
+        return jsonify({"error": str(e)}), 500
 
-@app.route('/dashboard', methods=['GET'])
-def dashboard_page():
-    return render_template('dashboard.html')
 
-@app.route('/search_page', methods=['GET'])
-def search_page():
-    return render_template('search.html')
+@app.route("/mysql/update/<int:user_id>", methods=["PUT"])
+def update_mysql(user_id):
+    data = request.get_json()
+    try:
+        mysql_cursor.execute(
+            "UPDATE users SET name=%s, email=%s WHERE id=%s",
+            (data["name"], data["email"], user_id)
+        )
+        mysql_conn.commit()
+        return jsonify({"message": "User updated successfully"}), 200
+    except Exception as e:
+        mysql_conn.rollback()
+        return jsonify({"error": str(e)}), 500
 
-@app.route('/api/signup', methods=['POST'])
-def api_signup():
-    data = request.get_json() or request.form
-    username = data.get('username')
-    email = data.get('email')
-    password = data.get('password')
-    tier = data.get('tier','regular')
-    if not (username and email and password):
-        return jsonify({'error':'missing fields'}), 400
-    import bcrypt
-    pw = bcrypt.hashpw(password.encode(), bcrypt.gensalt()).decode()
-    user = User(username=username, email=email, password_hash=pw, subscription_tier=tier)
-    db.session.add(user); db.session.commit()
-    with driver.session() as s:
-        s.run('MERGE (u:User {userId:$id, username:$username})', id=str(user.user_id), username=user.username)
-    token = create_jwt({'user_id': user.user_id, 'tier': user.subscription_tier, 'exp': datetime.datetime.utcnow().timestamp()+3600})
-    redis_client.setex(f'session:{user.user_id}', 3600, token)
-    return jsonify({'token': token})
 
-@app.route('/api/login', methods=['POST'])
-def api_login():
-    data = request.get_json() or request.form
-    email = data.get('email'); password = data.get('password')
-    user = User.query.filter_by(email=email).first()
-    if not user:
-        return jsonify({'error':'invalid'}), 401
-    import bcrypt
-    if not bcrypt.checkpw(password.encode(), user.password_hash.encode()):
-        return jsonify({'error':'invalid'}), 401
-    token = create_jwt({'user_id': user.user_id, 'tier': user.subscription_tier, 'exp': datetime.datetime.utcnow().timestamp()+3600})
-    redis_client.setex(f'session:{user.user_id}', 3600, token)
-    return jsonify({'token': token})
+@app.route("/mysql/delete/<int:user_id>", methods=["DELETE"])
+def delete_mysql(user_id):
+    try:
+        mysql_cursor.execute("DELETE FROM users WHERE id=%s", (user_id,))
+        mysql_conn.commit()
+        return jsonify({"message": "User deleted successfully"}), 200
+    except Exception as e:
+        mysql_conn.rollback()
+        return jsonify({"error": str(e)}), 500
 
-@app.route('/api/search', methods=['GET'])
-def api_search():
-    q = request.args.get('q','')
-    tier = request.args.get('tier','regular')
-    if tier not in ('regular','premium'): tier = 'regular'
-    qs = Ebook.objects(__raw__={ "$or":[ {"title":{"$regex":q,"$options":"i"}}, {"author":{"$regex":q,"$options":"i"}}, {"description":{"$regex":q,"$options":"i"}}, {"tags":{"$regex":q,"$options":"i"}} ] })
-    results = []
-    for b in qs:
-        if b.tier == 'premium' and tier!='premium':
-            continue
-        results.append({'id': str(b.id), 'title': b.title, 'author': b.author, 'tier': b.tier})
-    return jsonify(results[:50])
 
-@app.route('/api/choose', methods=['POST'])
-def api_choose():
-    data = request.get_json() or request.form
-    user_id = data.get('user_id'); book_id = data.get('book_id')
-    if not (user_id and book_id): return jsonify({'error':'missing'}), 400
-    rec = UserBooks(user_id=user_id, book_mongo_id=book_id); db.session.add(rec); db.session.commit()
-    Ebook.objects(id=book_id).update_one(inc__popularity=1)
-    with driver.session() as s:
-        s.run('MERGE (b:Book {mongoId:$mid}) MERGE (u:User {userId:$uid}) MERGE (u)-[:CHOSEN {at: datetime()}]->(b)', mid=book_id, uid=str(user_id))
-    return jsonify({'ok':True})
+# ------------------------------
+# MongoDB Route
+# ------------------------------
 
-@app.route('/api/recommend', methods=['GET'])
-def api_recommend():
-    user_id = request.args.get('user_id')
-    if not user_id: return jsonify({'error':'missing user_id'}), 400
-    with driver.session() as s:
-        res = s.run('''
-            MATCH (u:User {userId: $uid})-[:CHOSEN]->(b:Book)<-[:CHOSEN]-(other:User)-[:CHOSEN]->(rec:Book)
-            WHERE NOT (u)-[:CHOSEN]->(rec)
-            RETURN rec.mongoId AS id, COUNT(*) AS score ORDER BY score DESC LIMIT 10
-        ''', uid=str(user_id))
-        ids = [r['id'] for r in res]
-    books = Ebook.objects(id__in=ids)
-    return jsonify([{'id':str(b.id),'title':b.title,'author':b.author} for b in books])
+@app.route("/mongo", methods=["GET"])
+def read_mongo():
+    try:
+        data = list(mongo_collection.find({}, {"_id": 0}))
+        return jsonify(data), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
-if __name__ == '__main__':
-    app.run(port=Config.PORT, debug=True)
+
+# ------------------------------
+# Neo4j Route
+# ------------------------------
+
+@app.route("/neo4j", methods=["GET"])
+def read_neo4j():
+    try:
+        with neo4j_driver.session() as session:
+            query = "MATCH (n) RETURN n LIMIT 25"
+            results = session.run(query)
+            nodes = [record["n"]._properties for record in results]
+        return jsonify(nodes), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+# ------------------------------
+# Redis Route
+# ------------------------------
+
+@app.route("/redis", methods=["GET"])
+def read_redis():
+    try:
+        keys = redis_client.keys("*")
+        data = {key: redis_client.get(key) for key in keys}
+        return jsonify(data), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+# ------------------------------
+# Entry Point
+# ------------------------------
+
+if __name__ == "__main__":
+    app.run(host="0.0.0.0", port=5000, debug=True)
