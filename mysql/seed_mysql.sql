@@ -28,7 +28,7 @@ CREATE TABLE subscriptions (
     start_date DATE NOT NULL,
     expiry_date DATE,
     status ENUM('Active', 'Expired', 'Cancelled') DEFAULT 'Active',
-    FOREIGN KEY (user_id) REFERENCES users(id)
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 );
 
 -- ================================================
@@ -40,7 +40,7 @@ CREATE TABLE payments (
     amount DECIMAL(10,2),
     transaction_date DATETIME DEFAULT CURRENT_TIMESTAMP,
     status ENUM('Success', 'Failed') DEFAULT 'Success',
-    FOREIGN KEY (user_id) REFERENCES users(id)
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 );
 
 -- ================================================
@@ -62,7 +62,7 @@ CREATE TABLE ratings (
     book_id INT NOT NULL,
     rating INT CHECK (rating BETWEEN 1 AND 5),
     UNIQUE (user_id, book_id),
-    FOREIGN KEY (user_id) REFERENCES users(id),
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
     FOREIGN KEY (book_id) REFERENCES books(id)
 );
 
@@ -75,7 +75,7 @@ CREATE TABLE user_book (
     book_id INT NOT NULL,
     access_date DATETIME DEFAULT CURRENT_TIMESTAMP,
     UNIQUE (user_id, book_id),
-    FOREIGN KEY (user_id) REFERENCES users(id),
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
     FOREIGN KEY (book_id) REFERENCES books(id)
 );
 

@@ -4,7 +4,10 @@ import mysql.connector
 from pymongo import MongoClient
 from neo4j import GraphDatabase
 import redis
+from argon2 import PasswordHasher
+import re
 
+ph = PasswordHasher()
 app = Flask(__name__)
 CORS(app)
 
@@ -27,7 +30,7 @@ mongo_db = mongo_client["ebooks"]
 mongo_collection = mongo_db["books"]
 
 # Neo4j
-neo4j_driver = GraphDatabase.driver("bolt://localhost:7687", auth=("neo4j", "test1234"))
+neo4j_driver = GraphDatabase.driver("neo4j://127.0.0.1:7687", auth=("neo4j", "testpassword"))
 
 # Redis
 redis_client = redis.StrictRedis(host="localhost", port=6379, db=0, decode_responses=True)
@@ -56,10 +59,11 @@ def health():
 @app.route("/mysql/create", methods=["POST"])
 def create_mysql():
     data = request.get_json()
+    password=ph.hash(data["password"])
     try:
         mysql_cursor.execute(
-            "INSERT INTO users (name, email) VALUES (%s, %s)",
-            (data["name"], data["email"])
+            "INSERT INTO users (username, email, password_hash) VALUES (%s, %s, %s)",
+            (data["username"], data["email"],password)
         )
         mysql_conn.commit()
         return jsonify({"message": "User created successfully"}), 201
@@ -82,12 +86,33 @@ def read_mysql():
 
 @app.route("/mysql/update/<int:user_id>", methods=["PUT"])
 def update_mysql(user_id):
+    pattern = r"^[\w\.-]+@[\w\.-]+\.\w+$"
     data = request.get_json()
+
+    username = data.get("username")
+    email = data.get("email")
+
+    if not username and not email:
+        return jsonify({"error": "No fields provided"}), 400
+
+    if email and not re.match(pattern, email):
+        return jsonify({"error": "Invalid email format"}), 400
+
+    fields = []
+    values = []
+
+    if username:
+        fields.append("username=%s")
+        values.append(username)
+    if email:
+        fields.append("email=%s")
+        values.append(email)
+
+    values.append(user_id)
+    query = f"UPDATE users SET {', '.join(fields)} WHERE id=%s"
+
     try:
-        mysql_cursor.execute(
-            "UPDATE users SET name=%s, email=%s WHERE id=%s",
-            (data["name"], data["email"], user_id)
-        )
+        mysql_cursor.execute(query, tuple(values))
         mysql_conn.commit()
         return jsonify({"message": "User updated successfully"}), 200
     except Exception as e:
@@ -97,6 +122,7 @@ def update_mysql(user_id):
 
 @app.route("/mysql/delete/<int:user_id>", methods=["DELETE"])
 def delete_mysql(user_id):
+    
     try:
         mysql_cursor.execute("DELETE FROM users WHERE id=%s", (user_id,))
         mysql_conn.commit()
@@ -143,7 +169,9 @@ def read_neo4j():
 def read_redis():
     try:
         keys = redis_client.keys("*")
+        print(keys)
         data = {key: redis_client.get(key) for key in keys}
+        print(data)
         return jsonify(data), 200
     except Exception as e:
         return jsonify({"error": str(e)}), 500

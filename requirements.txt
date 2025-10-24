@@ -10,3 +10,4 @@ PyMySQL
 bcrypt
 PyJWT
 pymongo
+argon2-cffi
