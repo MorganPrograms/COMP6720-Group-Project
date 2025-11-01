@@ -1,2 +1,9 @@
-from flask_sqlalchemy import SQLAlchemy
-db = SQLAlchemy()
+import mysql.connector
+
+def get_mysql_connection():
+    return mysql.connector.connect(
+        host="localhost",
+        user="root",
+        password="",
+        database="ebook_service"
+    )

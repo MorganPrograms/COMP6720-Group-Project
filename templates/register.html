@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Register - eBook Portal</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+  <h2>Register</h2>
+  <form action="/register" method="post">
+    <input type="text" name="username" placeholder="Username" required><br>
+    <input type="email" name="email" placeholder="Email" required><br>
+    <input type="password" name="password" placeholder="Password" required><br>
+    <label for="tier">Subscription Tier:</label>
+      <select id="tier" name="tier" required>
+        <option value="Free">Free</option>
+        <option value="Premium">Premium</option>
+      </select>
+
+      <div id="premiumFields" style="display: none;">
+      <h3>Payment Information (Demo Only)</h3>
+      <div class="form-group">
+        <label for="cardName">Cardholder Name:</label>
+        <input type="text" id="cardName" name="cardName" placeholder="John Doe">
+      </div>
+      <div class="form-group">
+        <label for="cardNumber">Card Number:</label>
+        <input type="text" id="cardNumber" name="cardNumber" maxlength="16" placeholder="1111 2222 3333 4444">
+      </div>
+      <div class="form-inline">
+        <div class="form-group">
+          <label for="expiry">Expiry:</label>
+          <input type="text" id="expiry" name="expiry" placeholder="MM/YY">
+        </div>
+        <div class="form-group">
+          <label for="cvv">CVV:</label>
+          <input type="text" id="cvv" name="cvv" maxlength="3" placeholder="123">
+        </div>
+      </div>
+    </div>
+    
+    <button type="submit">Register</button>
+  </form>
+</body>
+</html>

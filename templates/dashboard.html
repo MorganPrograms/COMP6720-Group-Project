@@ -1,1 +1,132 @@
-<!doctype html><html><head><meta charset='utf-8'><title>Dashboard</title><link rel='stylesheet' href='/static/style.css'></head><body><h2>Dashboard</h2><div id='books'></div><script src='/static/script.js'></script></body></html>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Your Dashboard</title>
+    <style>
+        body {
+            font-family: "Segoe UI", sans-serif;
+            background-color: #f8f9fa;
+            color: #333;
+            margin: 0;
+            padding: 0;
+        }
+        header {
+            background-color: #343a40;
+            color: #fff;
+            padding: 1rem;
+            text-align: center;
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+        }
+        .logout {
+            float: right;
+            background-color: #dc3545;
+            border: none;
+            color: white;
+            padding: 0.5rem 1rem;
+            border-radius: 5px;
+            cursor: pointer;
+            text-decoration: none;
+        }
+        .logout:hover {
+            background-color: #a71d2a;
+        }
+        .container {
+            padding: 2rem;
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+            gap: 1.5rem;
+        }
+        .book-card {
+            background: #fff;
+            padding: 1rem;
+            border-radius: 10px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+            transition: transform 0.2s ease-in-out;
+            position: relative;
+        }
+        .book-card:hover {
+            transform: translateY(-5px);
+        }
+        .book-card h3 {
+            margin-top: 0;
+            color: #007bff;
+        }
+        .book-card p {
+            font-size: 0.9rem;
+        }
+        .book-actions {
+            margin-top: 1rem;
+        }
+        .book-actions a, .book-actions button {
+            background-color: #007bff;
+            border: none;
+            color: white;
+            padding: 0.5rem 1rem;
+            margin-right: 0.5rem;
+            border-radius: 5px;
+            cursor: pointer;
+            text-decoration: none;
+        }
+        .book-actions a:hover, .book-actions button:hover {
+            background-color: #0056b3;
+        }
+        .premium-lock {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background-color: rgba(255, 215, 0, 0.9);
+            color: black;
+            padding: 0.3rem 0.6rem;
+            border-radius: 5px;
+            font-size: 0.8rem;
+            font-weight: bold;
+        }
+        .locked {
+            opacity: 0.6;
+        }
+        .upgrade-message {
+            color: #dc3545;
+            font-size: 0.85rem;
+            font-weight: bold;
+            margin-top: 0.5rem;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>Welcome, {{ session.get('username', 'User') }}!</h1>
+        <a href="/logout" class="logout">Logout</a>
+    </header>
+
+    <div class="container">
+        {% for book in books %}
+        <div class="book-card {% if book.access_tier == 'Premium' and user_tier == 'Free' %}locked{% endif %}">
+            <h3>{{ book.title }}</h3>
+            <p><b>Author:</b> {{ book.author }}</p>
+            <p><b>Genre:</b> {{ book.genre }}</p>
+            <p><b>Rating:</b> {{ book.rating }}</p>
+            <p>{{ book.discription }}</p>
+
+            {% if book.access_tier == "Premium" %}
+                <div class="premium-lock">🔒 PREMIUM</div>
+            {% endif %}
+
+            <div class="book-actions">
+                {% if book.access_tier == 'Premium' and user_tier == 'Free' %}
+                    <p class="upgrade-message">Upgrade to access this book!</p>
+                {% else %}
+                    <a href="/book/{{ book._id }}">View</a>
+                    <a href="/book/{{ book._id }}/read">Read</a>
+                {% endif %}
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    <a href="{{ url_for('recommendations') }}">AI Recommendations</a> |
+<a href="{{ url_for('genre_recommendations') }}">Genre-Based Recommendations</a>
+
+</body>
+</html>

@@ -1,0 +1,16 @@
+<!DOCTYPE html>
+<html>
+<head><title>Reading Book</title></head>
+<body>
+  <h1>Reading Book</h1>
+  <iframe src="/static/sample.pdf" width="100%" height="600px"></iframe>
+
+  <form method="POST">
+    <label>Current Page:</label>
+    <input type="number" name="page_number" min="1" required>
+    <button type="submit">Save Progress</button>
+  </form>
+
+  <p>Last page you read: {{ last_page }}</p>
+</body>
+</html>

@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Reading Book</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+  <style>
+    body { font-family: Arial, sans-serif; margin: 0; background: #f4f4f4; }
+    .header { background: #007bff; color: white; padding: 15px; text-align: center; }
+    iframe { width: 100%; height: 85vh; border: none; display: block; margin-top: 10px; }
+    .footer { background: white; padding: 15px; text-align: center; box-shadow: 0 -2px 5px rgba(0,0,0,0.1); position: sticky; bottom: 0; }
+    button { background: #007bff; color: white; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; }
+    button:hover { background: #0056b3; }
+    input { width: 60px; padding: 5px; text-align: center; }
+  </style>
+</head>
+<body>
+
+  <div class="header">
+    <h2>Now Reading: Book {{ book_id }}</h2>
+    {% if last_page > 1 %}
+    <p>You last stopped on page {{ last_page }} — <button onclick="goToPage({{ last_page }})">Continue Reading</button></p>
+    {% endif %}
+  </div>
+
+  <!-- Dummy PDF for demo -->
+  <iframe id="pdfViewer" src="{{ url_for('static', filename='demo.pdf') }}"></iframe>
+
+  <div class="footer">
+    <label for="page">Page:</label>
+    <input type="number" id="page" min="1" value="{{ last_page }}" onchange="saveProgress()">
+    <button onclick="saveProgress()">Save Progress</button>
+  </div>
+
+  <script>
+    const bookId = "{{ book_id }}";
+
+    function saveProgress() {
+      const page = document.getElementById('page').value;
+      fetch(`/book/${bookId}/save_progress`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: `page=${page}`
+      });
+    }
+
+    function goToPage(page) {
+      document.getElementById('page').value = page;
+      alert(`Resuming from page ${page}...`);
+    }
+  </script>
+
+</body>
+</html>

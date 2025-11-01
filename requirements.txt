@@ -1,8 +1,6 @@
 Flask
 Flask-SQLAlchemy
 python-dotenv
-flask_cors
-MySQL.connector
 mongoengine
 neo4j
 redis

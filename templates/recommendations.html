@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Your Recommendations</title>
+  <style>
+    body { font-family: Arial, sans-serif; background: #fafafa; margin: 40px; }
+    .container { max-width: 600px; margin: auto; background: white; padding: 30px; border-radius: 10px; box-shadow: 0 0 10px #ddd; }
+    h2 { margin-bottom: 20px; }
+    ul { list-style: none; padding: 0; }
+    li { margin-bottom: 15px; padding: 10px; background: #f9f9f9; border-radius: 8px; }
+    a { text-decoration: none; color: #007bff; }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+    <h2>Recommended for You</h2>
+    {% if recs %}
+    <ul>
+      {% for rec in recs %}
+        <li>
+          <a href="{{ url_for('book_details', book_id=rec.book_id) }}">Book ID: {{ rec.book_id }}</a><br>
+          <small>Genre: {{ rec.genre }}</small>
+        </li>
+      {% endfor %}
+    </ul>
+    {% else %}
+      <p>No recommendations yet. Try rating or subscribing to some books first!</p>
+    {% endif %}
+  </div>
+
+</body>
+</html>

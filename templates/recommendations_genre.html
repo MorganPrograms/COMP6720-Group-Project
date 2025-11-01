@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Genre-Based Recommendations</title>
+  <style>
+    body { font-family: Arial, sans-serif; background: #fafafa; margin: 40px; }
+    .container { max-width: 800px; margin: auto; background: white; padding: 30px; border-radius: 10px; box-shadow: 0 0 10px #ddd; }
+    h2 { margin-bottom: 20px; }
+    .genre { color: #555; font-style: italic; margin-bottom: 10px; }
+    .book-card { background: #f9f9f9; padding: 15px; margin-bottom: 15px; border-radius: 8px; }
+    .book-card a { text-decoration: none; color: #007bff; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h2>Books You Might Like by Genre</h2>
+
+    {% if genres %}
+      <p>We noticed you enjoy books in these genres: <strong>{{ genres|join(", ") }}</strong></p>
+      {% for book in books %}
+        <div class="book-card">
+          <a href="{{ url_for('book_details', book_id=book._id) }}"><strong>{{ book.title }}</strong></a><br>
+          <span class="genre">{{ book.genre }}</span><br>
+          <small>By {{ book.author }}</small>
+        </div>
+      {% endfor %}
+    {% else %}
+      <p>No favorite genres found yet! Try subscribing to or rating some books first.</p>
+    {% endif %}
+  </div>
+</body>
+</html>

@@ -1,0 +1,52 @@
+{% extends "layout.html" %}
+{% block content %}
+<div class="container mt-4">
+  <h2>{{ book.title }}</h2>
+  <p><strong>Author:</strong> {{ book.author }}</p>
+
+  <div class="mb-3">
+    <a class="btn btn-outline-primary" href="{{ pdf_path }}" target="_blank">Open PDF in new tab</a>
+  </div>
+
+  <div class="mb-3">
+    <label>Last saved page: <span id="lastPage">{{ last_page }}</span></label>
+  </div>
+
+  <div class="row g-2 align-items-center">
+    <div class="col-auto">
+      <input type="number" id="pageInput" class="form-control" value="{{ last_page }}" min="1">
+    </div>
+    <div class="col-auto">
+      <button id="saveProgress" class="btn btn-success">Save progress</button>
+    </div>
+  </div>
+
+  <p class="mt-3 text-muted">This demo stores your progress so you'll be prompted to continue later.</p>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function(){
+  const bookId = "{{ book._id }}";
+  const pageInput = document.getElementById('pageInput');
+  const saveBtn = document.getElementById('saveProgress');
+  const lastPageSpan = document.getElementById('lastPage');
+
+  saveBtn.addEventListener('click', async () => {
+    const last_page = parseInt(pageInput.value || '0', 10);
+    if (!last_page || last_page < 1) return alert('Enter a valid page number');
+    const res = await fetch(`/book/${bookId}/progress`, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ last_page: last_page })
+    });
+    const j = await res.json();
+    if (j.ok) {
+      alert('Progress saved');
+      lastPageSpan.textContent = last_page;
+    } else {
+      alert('Error saving progress');
+    }
+  });
+});
+</script>
+{% endblock %}

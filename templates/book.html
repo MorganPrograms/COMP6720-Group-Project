@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html>
+<head><title>{{ book.title }}</title></head>
+<body>
+  <h1>{{ book.title }}</h1>
+  <p><b>Author:</b> {{ book.author }}</p>
+  <p><b>Genre:</b> {{ book.genre }}</p>
+  <p><b>Summary:</b> {{ book.summary }}</p>
+  
+  <form action="/book/{{ book._id }}/rate" method="POST">
+    <label>Your Rating:</label>
+    <input type="number" name="rating" min="1" max="5" value="{{ user_rating[0] if user_rating else '' }}">
+    <button type="submit">Submit Rating</button>
+  </form>
+
+  <form action="/book/{{ book._id }}/subscribe" method="POST">
+    <button type="submit">Subscribe</button>
+  </form>
+
+  <a href="/book/{{ book._id }}/read">Read Book</a>
+</body>
+</html>
