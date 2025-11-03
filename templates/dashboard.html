@@ -102,13 +102,14 @@
     </header>
 
     <div class="container">
-        {% for book in books %}
+        
+        {% for book,ratings in combined %}
         <div class="book-card {% if book.access_tier == 'Premium' and user_tier == 'Free' %}locked{% endif %}">
             <h3>{{ book.title }}</h3>
             <p><b>Author:</b> {{ book.author }}</p>
             <p><b>Genre:</b> {{ book.genre }}</p>
-            <p><b>Rating:</b> {{ book.rating }}</p>
-            <p>{{ book.discription }}</p>
+            <p><b>Rating:</b> {{ ratings.average_rating }}</p>
+            <p>{{ book.description }}</p>
 
             {% if book.access_tier == "Premium" %}
                 <div class="premium-lock">🔒 PREMIUM</div>
@@ -125,8 +126,7 @@
         </div>
         {% endfor %}
     </div>
-    <a href="{{ url_for('recommendations') }}">AI Recommendations</a> |
-<a href="{{ url_for('genre_recommendations') }}">Genre-Based Recommendations</a>
+<a href="{{ url_for('genre_recommendations') }}">Recommendations for you</a>
 
 </body>
 </html>

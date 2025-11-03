@@ -1,15 +1,26 @@
-from flask import Flask, flash, render_template, request, redirect, jsonify, session, redirect, url_for
+from flask import Flask, flash, render_template, request, redirect, jsonify, session, redirect, url_for, session
+from flask_session import Session
+import redis
 from db.mysql_connection import get_mysql_connection
 from db.mongo_connection import get_mongo_connection
 from db.neo4j_connection import get_neo4j_driver, create_user_and_book_nodes, create_relationship, get_recommendations
 from db.redis_connection import get_redis_client
 from werkzeug.security import generate_password_hash, check_password_hash
 from bson.objectid import ObjectId
+from bson.errors import InvalidId
 import pymysql
-import datetime
+from datetime import datetime
 
 app = Flask(__name__)
 app.secret_key = "supersecretkey"
+app.config["SESSION_TYPE"] = "redis"
+app.config["SESSION_PERMANENT"] = False
+app.config["SESSION_USE_SIGNER"] = True
+app.config["SESSION_KEY_PREFIX"] = "session:"
+app.config["SESSION_REDIS"] = redis.StrictRedis(host="localhost", port=6379, db=0)
+
+# Initialize session
+Session(app)
 
 # ---------- ROUTES ----------
 
@@ -46,9 +57,10 @@ def login():
 
     if user and check_password_hash(user['password_hash'], password):
         session['user_id'] = user['id']
+        session["email"] = user["email"]
         session['tier'] = user['subscription_tier']
-        redis_client = get_redis_client()
-        redis_client.set(f"user:{user['id']}:tier", user['subscription_tier'])
+        #redis_client = get_redis_client()
+        #redis_client.set(f"user:{user['id']}:tier", user['subscription_tier'])
         return redirect(url_for('dashboard'))
     return "Invalid credentials", 401
 
@@ -56,7 +68,7 @@ def login():
 def logout():
     session.clear()
     flash("You have been logged out.", "info")
-    return redirect(url_for("login"))
+    return redirect(url_for('index'))
 
 
 @app.route("/dashboard")
@@ -73,12 +85,15 @@ def dashboard():
     cur.execute("SELECT subscription_tier FROM users WHERE id = %s", (user_id,))
     result = cur.fetchone()
     user_tier = result["subscription_tier"] if result else "Free"
-
+    cur = conn.cursor(dictionary=True)
+    cur.execute("SELECT b.id AS book_id, AVG(r.rating) AS average_rating, COUNT(r.user_id) AS total_ratings FROM ratings r JOIN books b ON r.book_id = b.mongo_id GROUP BY b.id, b.title ORDER BY average_rating DESC; ")
+    ratings = cur.fetchall()
     # Get all books from MongoDB
     mongo_db = get_mongo_connection()
     books = list(mongo_db.books.find())
+    combined = zip(books,ratings)
 
-    return render_template("dashboard.html", books=books, user_tier=user_tier)
+    return render_template("dashboard.html", user_tier=user_tier, combined = combined)
 
 
 
@@ -111,15 +126,12 @@ def health():
 @app.route("/book/<book_id>")
 def book_details(book_id):
     """Displays a book's details (from MongoDB) and allows user to rate or subscribe."""
-    db = get_mongo_connection()["ebooks"]
-    books = db["books"]
+    db = get_mongo_connection()
+    book = None
 
     # Retrieve book info from MongoDB
-    try:
 
-        book = books.find_one({"_id": ObjectId(book_id)})
-    except Exception:
-        book = books.find_one({'custom_id': book_id})
+    book = db.books.find_one({"_id": book_id})
     if not book:
         return "Book not found", 404
 
@@ -160,6 +172,8 @@ def rate_book(book_id):
     conn.commit()
     cursor.close()
     conn.close()
+    flash('Book rated successfully!', 'success')
+    neo4j_driver = get_neo4j_driver()
 
     # Update Neo4j recommendation relationships
     with neo4j_driver.session() as session_neo:
@@ -190,7 +204,8 @@ def subscribe_book(book_id):
     conn.commit()
     cursor.close()
     conn.close()
-
+    flash('Book subscribed successfully!', 'success')
+    neo4j_driver = get_neo4j_driver()
     # Update Neo4j relationship
     with neo4j_driver.session() as session_neo:
         session_neo.run("""
@@ -198,6 +213,7 @@ def subscribe_book(book_id):
             MERGE (b:Book {id: $book_id})
             MERGE (u)-[:SUBSCRIBED_TO]->(b)
         """, user_id=str(user_id), book_id=str(book_id))
+
 
     return redirect(url_for("read_book", book_id=book_id))
 
@@ -236,6 +252,7 @@ def save_progress(book_id):
     conn.commit()
     cursor.close()
     conn.close()
+    flash('Progress saved successfully!', 'success')
 
     return jsonify({"status": "success"})
 
@@ -260,7 +277,7 @@ def genre_recommendations():
     cursor.close()
 
     # Use MongoDB to suggest more books in those genres
-    mongo_db = get_mongo_db()
+    mongo_db = get_mongo_connection()
     genre_books = list(mongo_db.books.find({"genre": {"$in": genres}}, {"_id": 1, "title": 1, "genre": 1, "author": 1}).limit(10))
 
     return render_template("recommendations_genre.html", genres=genres, books=genre_books)
