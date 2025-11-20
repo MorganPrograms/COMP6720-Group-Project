@@ -1,1 +1,41 @@
-<!doctype html><html><head><meta charset='utf-8'><title>Search</title><link rel='stylesheet' href='/static/style.css'></head><body><h2>Search</h2><form id='searchForm'><input id='q' placeholder='search...'/><button type='button' onclick='search()'>Search</button></form><div id='results'></div><script src='/static/script.js'></script></body></html>
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Search Books</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; }
+        input, select, button { padding: 8px; margin: 5px; }
+        .book-card { border: 1px solid #ccc; padding: 15px; margin-bottom: 10px; border-radius: 6px; }
+        .book-card h3 { margin: 0; }
+    </style>
+</head>
+<body>
+    <h1>Search & Filter Books</h1>
+
+    <form method="get" action="/search">
+        <input type="text" name="query" placeholder="Search..." value="{{ query or '' }}">
+        <select name="filter_by">
+            <option value="title" {% if filter_by == 'title' %}selected{% endif %}>Title</option>
+            <option value="author" {% if filter_by == 'author' %}selected{% endif %}>Author</option>
+            <option value="genre" {% if filter_by == 'genre' %}selected{% endif %}>Genre</option>
+            <option value="date" {% if filter_by == 'date' %}selected{% endif %}>Publication Date</option>
+        </select>
+        <button type="submit">Search</button>
+    </form>
+
+    {% if error %}
+        <p style="color:red">{{ error }}</p>
+    {% endif %}
+
+    {% for book in books %}
+        <div class="book-card">
+            <h3>{{ book.title }}</h3>
+            <p><strong>Author:</strong> {{ book.author }}</p>
+            <p><strong>Genre:</strong> {{ book.genre }}</p>
+            <p><strong>Access:</strong> {{ book.access_tier }}</p>
+            <p><strong>Published:</strong> {{ book.details.publication_date['$date'][:10] if book.details and book.details.publication_date else 'N/A' }}</p>
+            <p>{{ book.description }}</p>
+        </div>
+    {% endfor %}
+</body>
+</html>

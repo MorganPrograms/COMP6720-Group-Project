@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Account Management</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+    <script src="{{ url_for('static', filename='scripts.js') }}" defer></script>
+</head>
+<body>
+    <h1>Account Management</h1>
+
+    <section class="account-info">
+        <h2>Profile Information</h2>
+        <form id="updateProfileForm" method="POST" action="/update_profile">
+            <label>Username:</label>
+            <input type="text" name="username" value="{{ user.username }}" required>
+
+            <label>Email:</label>
+            <input type="email" name="email" value="{{ user.email }}" required>
+
+            <button type="submit">Update Profile</button>
+        </form>
+    </section>
+
+    <section class="password-section">
+        <h2>Change Password</h2>
+        <form id="changePasswordForm" method="POST" action="/change_password">
+            <label>Current Password:</label>
+            <input type="password" name="current_password" required>
+
+            <label>New Password:</label>
+            <input type="password" name="new_password" required>
+
+            <button type="submit">Change Password</button>
+        </form>
+    </section>
+
+    <section class="subscription-section">
+        <h2>Subscription</h2>
+        <p>Current Tier: <strong>{{ user.subscription_tier }}</strong></p>
+
+        {% if user.subscription_tier == 'Free' %}
+        <form id="upgradeForm" method="POST" action="/upgrade_to_premium">
+            <h3>Upgrade to Premium</h3>
+
+            <label>Credit Card Number (Demo Only)</label>
+            <input type="text" name="cc_number" placeholder="1234 5678 9012 3456" required>
+
+            <label>Expiration Date</label>
+            <input type="text" name="cc_exp" placeholder="MM/YY" required>
+
+            <label>CVV</label>
+            <input type="text" name="cc_cvv" placeholder="123" required>
+
+            <button type="submit">Upgrade to Premium</button>
+        </form>
+        {% else %}
+        <p>You are already a Premium member. 🎉</p>
+        {% endif %}
+    </section>
+</body>
+</html>

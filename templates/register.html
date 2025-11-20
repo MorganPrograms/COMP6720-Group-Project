@@ -1,12 +1,36 @@
-<!DOCTYPE html>
-<html>
+
+
 <head>
   <title>Register - eBook Portal</title>
-  <link rel="stylesheet" href="/static/style.css">
+
 </head>
 <body>
   <h2>Register</h2>
-  <form action="/register" method="post">
+
+<style>
+.hidden {
+    display: none;
+}
+form {
+    max-width: 400px;
+    padding: 15px;
+    border: 1px solid #ccc;
+    border-radius: 8px;
+}
+label {
+    display: block;
+    margin-top: 10px;
+}
+input, select, textarea, button {
+    width: 100%;
+    padding: 8px;
+    margin-top: 3px;
+}
+</style>
+
+
+
+  <form action="/register" method="post" id="registerForm" >
     <input type="text" name="username" placeholder="Username" required><br>
     <input type="email" name="email" placeholder="Email" required><br>
     <input type="password" name="password" placeholder="Password" required><br>
@@ -15,30 +39,46 @@
         <option value="Free">Free</option>
         <option value="Premium">Premium</option>
       </select>
+ <!-- Advanced Account Fields -->
+    <div id="advancedFields" class="hidden">
 
-      <div id="premiumFields" style="display: none;">
-      <h3>Payment Information (Demo Only)</h3>
-      <div class="form-group">
-        <label for="cardName">Cardholder Name:</label>
-        <input type="text" id="cardName" name="cardName" placeholder="John Doe">
-      </div>
-      <div class="form-group">
-        <label for="cardNumber">Card Number:</label>
-        <input type="text" id="cardNumber" name="cardNumber" maxlength="16" placeholder="1111 2222 3333 4444">
-      </div>
-      <div class="form-inline">
-        <div class="form-group">
-          <label for="expiry">Expiry:</label>
-          <input type="text" id="expiry" name="expiry" placeholder="MM/YY">
-        </div>
-        <div class="form-group">
-          <label for="cvv">CVV:</label>
-          <input type="text" id="cvv" name="cvv" maxlength="3" placeholder="123">
-        </div>
-      </div>
+        <h3>Payment Details</h3>
+
+        <label>Payment Method:</label>
+        <select id="paymentMethod" name="paymentMethod">
+            <option value="">-- Select --</option>
+            <option value="debit">Debit Card</option>
+            <option value="credit">Credit Card</option>
+        </select>
+
+        <label>Card Number:</label>
+            <input type="text" name="card_number" placeholder="1234 5678 9012 3456" required>
+
+            <label>Expiry Date</label>
+            <input type="text" name="expiry" placeholder="MM/YY" required>
+
+            <label>CVV</label>
+            <input type="text" name="cvv" placeholder="123" required>
+
+            <button type="submit" class="btn">Confirm Upgrade</button>
     </div>
+
+    
     
     <button type="submit">Register</button>
   </form>
 </body>
-</html>
+
+<script>
+// Toggle visibility when selecting account type
+document.getElementById("tier").addEventListener("change", function () {
+    const isAdvanced = this.value === "Premium";
+    const advancedFields = document.getElementById("advancedFields");
+
+    if (isAdvanced) {
+        advancedFields.classList.remove("hidden");
+    } else {
+        advancedFields.classList.add("hidden");
+    }
+});
+</script>

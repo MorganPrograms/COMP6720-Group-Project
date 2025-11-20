@@ -17,3 +17,86 @@ button {
 button:hover {
   background-color: #45a049;
 }
+
+.search-container {
+  padding: 40px;
+  max-width: 1000px;
+  margin: auto;
+  color: #333;
+}
+
+.search-form {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 30px;
+}
+
+.search-form input, .search-form button {
+  padding: 10px;
+  border-radius: 8px;
+  border: 1px solid #ccc;
+  font-size: 16px;
+}
+
+.search-form button {
+  background-color: #1e88e5;
+  color: white;
+  border: none;
+  cursor: pointer;
+}
+
+.search-form button:hover {
+  background-color: #1565c0;
+}
+
+.book-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 20px;
+}
+
+.book-card {
+  background: #fff;
+  padding: 20px;
+  border-radius: 15px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  transition: 0.3s ease-in-out;
+}
+
+.book-card:hover {
+  transform: scale(1.03);
+}
+
+.book-info h3 {
+  color: #1e88e5;
+  margin-bottom: 8px;
+}
+
+.book-info p {
+  margin: 5px 0;
+}
+
+.book-info .desc {
+  color: #666;
+  font-size: 14px;
+}
+
+.btn-view {
+  display: inline-block;
+  margin-top: 10px;
+  text-decoration: none;
+  background-color: #1e88e5;
+  color: white;
+  padding: 8px 14px;
+  border-radius: 8px;
+}
+
+.btn-view:hover {
+  background-color: #1565c0;
+}
+
+.no-results {
+  text-align: center;
+  margin-top: 40px;
+  color: #888;
+}

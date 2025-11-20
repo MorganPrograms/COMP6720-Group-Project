@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Upgrade to Premium</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+</head>
+<body>
+    <div class="upgrade-container">
+        <h2>Upgrade to Premium</h2>
+        <p>Unlock access to exclusive books, bonus content, and personalized recommendations.</p>
+
+        <form method="post">
+            <label>Credit Card Number (demo only)</label>
+            <input type="text" name="card_number" placeholder="1234 5678 9012 3456" required>
+
+            <label>Expiry Date</label>
+            <input type="text" name="expiry" placeholder="MM/YY" required>
+
+            <label>CVV</label>
+            <input type="text" name="cvv" placeholder="123" required>
+
+            <button type="submit" class="btn">Confirm Upgrade</button>
+        </form>
+
+        <p class="note">No real payment will be processed. This is a demo.</p>
+    </div>
+</body>
+</html>
