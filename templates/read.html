@@ -1,0 +1,24 @@
+<!-- templates/read.html -->
+{% extends "layout.html" %}
+{% block content %}
+
+<h2 class="mb-3">{{ book.title }}</h2>
+<p class="text-muted">{{ book.author }}</p>
+
+<div class="ratio ratio-16x9 mb-4 border rounded shadow-sm">
+    <iframe 
+        src="{{ viewer_url }}" 
+        allow="autoplay"
+        style="width: 100%; height: 100%; border: 0;">
+    </iframe>
+</div>
+
+<p class="text-muted">
+    Purchase Type: <strong>{{ purchase_type }}</strong>
+</p>
+
+<a href="{{ url_for('ui.book_detail', book_id=book._id) }}" class="btn btn-secondary">
+    Back to Book
+</a>
+
+{% endblock %}

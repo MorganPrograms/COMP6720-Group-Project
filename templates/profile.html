@@ -1,0 +1,55 @@
+<!-- templates/profile.html -->
+{% extends "layout.html" %}
+{% block content %}
+
+<h2 class="mb-4">Your Profile</h2>
+
+<div class="card shadow-sm p-4">
+
+    <form method="POST">
+
+        <!-- NON-EDITABLE EMAIL -->
+        <div class="mb-3">
+            <label class="form-label">Email (read-only)</label>
+            <input type="email" class="form-control" value="{{ user.email }}" readonly>
+        </div>
+
+        <!-- USERNAME -->
+        <div class="mb-3">
+            <label class="form-label">Username</label>
+            <input name="username" type="text" class="form-control"
+                   value="{{ user.username }}">
+        </div>
+
+        <!-- COUNTRY -->
+        <div class="mb-3">
+            <label class="form-label">Country</label>
+            <input name="country" type="text" class="form-control"
+                   value="{{ user.country }}">
+        </div>
+
+        <!-- DOB -->
+        <div class="mb-3">
+            <label class="form-label">Date of Birth</label>
+            <input name="date_of_birth" type="date" class="form-control"
+                   value="{{ user.date_of_birth }}">
+        </div>
+
+        <!-- STATUS -->
+        <div class="mb-3">
+            <label class="form-label">Account Status</label>
+            {% if user.status == "PREMIUM" %}
+                <div class="alert alert-warning">You are a <strong>Premium</strong> user.</div>
+            {% else %}
+                <div class="alert alert-info">You are a <strong>Free</strong> user.</div>
+                <a href="{{ url_for('ui.upgrade') }}" class="btn btn-warning w-100 mb-3">
+                    Upgrade to Premium
+                </a>
+            {% endif %}
+        </div>
+
+        <button class="btn btn-primary w-100">Save Changes</button>
+    </form>
+</div>
+
+{% endblock %}

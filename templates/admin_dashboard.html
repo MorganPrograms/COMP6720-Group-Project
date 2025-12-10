@@ -1,0 +1,161 @@
+<!-- templates/admin_dashboard.html -->
+{% extends "layout.html" %}
+{% block content %}
+
+<h2 class="mb-4 text-danger">Admin Dashboard</h2>
+
+<div class="row">
+
+    <!-- OVERVIEW PANEL -->
+    <div class="col-md-4">
+        <div class="card shadow-sm mb-4">
+            <div class="card-header bg-dark text-white">
+                Overview
+            </div>
+            <div class="card-body" id="overviewBox">
+                <p>Loading...</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- USERS PANEL -->
+    <div class="col-md-8">
+        <div class="card shadow-sm mb-4">
+            <div class="card-header bg-primary text-white">
+                Users
+            </div>
+            <div class="card-body p-0">
+                <div style="max-height: 350px; overflow-y: auto;">
+                    <table class="table table-striped table-hover mb-0">
+                        <thead class="table-dark">
+                            <tr>
+                                <th>ID</th>
+                                <th>Email</th>
+                                <th>Username</th>
+                                <th>Country</th>
+                                <th>Status</th>
+                                <th>Books Read</th>
+                                <th>Spent</th>
+                            </tr>
+                        </thead>
+                        <tbody id="usersTable">
+                            <tr><td colspan="7" class="text-center py-3">Loading...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+
+<!-- POPULAR BOOKS -->
+<div class="card shadow-sm mb-5">
+    <div class="card-header bg-success text-white">
+        Popular Books
+    </div>
+    <div class="card-body p-0">
+        <div style="max-height: 350px; overflow-y: auto;">
+            <table class="table table-striped table-hover mb-0">
+                <thead class="table-dark">
+                    <tr>
+                        <th>Title</th>
+                        <th>Author</th>
+                        <th>Views</th>
+                        <th>Rating</th>
+                        <th>Premium?</th>
+                    </tr>
+                </thead>
+                <tbody id="popularBooksTable">
+                    <tr><td colspan="5" class="text-center py-3">Loading...</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+
+<script>
+// ---------- Fetch Overview ----------
+function loadOverview() {
+    fetch("/api/admin/overview")
+    .then(r => r.json())
+    .then(data => {
+        document.getElementById("overviewBox").innerHTML = `
+            <p><strong>Total Users:</strong> ${data.total_users}</p>
+            <p><strong>Premium Users:</strong> ${data.total_premium}</p>
+            <p><strong>Total Purchases:</strong> ${data.total_purchases}</p>
+            <p><strong>Total Revenue:</strong> $${data.total_revenue.toFixed(2)}</p>
+            <p><strong>Total Books:</strong> ${data.total_books}</p>
+        `;
+    })
+    .catch(err => {
+        document.getElementById("overviewBox").innerHTML =
+            "<p class='text-danger'>Failed to load.</p>";
+    });
+}
+
+
+// ---------- Fetch Users ----------
+function loadUsers() {
+    fetch("/api/admin/users")
+    .then(r => r.json())
+    .then(rows => {
+        let html = "";
+        for (let u of rows) {
+            html += `
+                <tr>
+                    <td>${u.id}</td>
+                    <td>${u.email}</td>
+                    <td>${u.username}</td>
+                    <td>${u.country || ""}</td>
+                    <td>${u.status}</td>
+                    <td>${u.total_books_read}</td>
+                    <td>$${parseFloat(u.total_spent).toFixed(2)}</td>
+                </tr>
+            `;
+        }
+        document.getElementById("usersTable").innerHTML = html;
+    })
+    .catch(err => {
+        document.getElementById("usersTable").innerHTML =
+            "<tr><td colspan='7' class='text-danger text-center py-3'>Failed to load.</td></tr>";
+    });
+}
+
+
+// ---------- Fetch Popular Books ----------
+function loadPopularBooks() {
+    fetch("/api/admin/books/popular")
+    .then(r => r.json())
+    .then(rows => {
+        let html = "";
+        for (let b of rows) {
+            html += `
+                <tr>
+                    <td>${b.title}</td>
+                    <td>${b.author || ""}</td>
+                    <td>${b.views}</td>
+                    <td>${b.rating.avg} (${b.rating.count})</td>
+                    <td>${b.premium_only ? "Yes" : "No"}</td>
+                </tr>
+            `;
+        }
+        document.getElementById("popularBooksTable").innerHTML = html;
+    })
+    .catch(err => {
+        document.getElementById("popularBooksTable").innerHTML =
+            "<tr><td colspan='5' class='text-danger text-center py-3'>Failed to load.</td></tr>";
+    });
+}
+
+// ---------- Init ----------
+document.addEventListener("DOMContentLoaded", () => {
+    loadOverview();
+    loadUsers();
+    loadPopularBooks();
+});
+</script>
+
+{% endblock %}

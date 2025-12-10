@@ -1,0 +1,79 @@
+<!-- templates/cart.html -->
+{% extends "layout.html" %}
+{% block title %}Your Cart{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <h2>Your Shopping Cart</h2>
+
+    {% if items %}
+        <form method="POST" action="{{ url_for('ui.cart_checkout') }}">
+
+            <table class="table table-bordered mt-3 shadow-sm align-middle">
+                <thead class="table-dark">
+                    <tr>
+                        <th>Cover</th>
+                        <th>Book</th>
+                        <th>Format</th>
+                        <th>Price</th>
+                        <th style="width: 120px;">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in items %}
+                    <tr>
+                        <td style="width:80px;">
+                            <img src="{{ item.cover_url }}" class="img-fluid rounded">
+                        </td>
+                        <td>
+                            <strong>{{ item.title }}</strong><br>
+                            <small class="text-muted">{{ item.author }}</small>
+                        </td>
+                        <td>
+                            <form method="POST"
+                                  action="{{ url_for('ui.cart_add', book_id=item.id) }}">
+                                <select name="mode"
+                                        class="form-select form-select-sm"
+                                        onchange="this.form.submit()">
+                                    <option value="RENT" {% if item.mode == 'RENT' %}selected{% endif %}>
+                                        Rent (40%)
+                                    </option>
+                                    <option value="DIGITAL" {% if item.mode == 'DIGITAL' %}selected{% endif %}>
+                                        Buy Ebook
+                                    </option>
+                                    <option value="HARDCOVER" {% if item.mode == 'HARDCOVER' %}selected{% endif %}>
+                                        Buy Hardcover (+50%)
+                                    </option>
+                                </select>
+                            </form>
+                        </td>
+                        <td>
+                            ${{ "%.2f"|format(item.price) }}
+                        </td>
+                        <td>
+                            <form method="POST"
+                                  action="{{ url_for('ui.cart_remove', book_id=item.id) }}">
+                                <button class="btn btn-sm btn-outline-danger w-100">
+                                    Remove
+                                </button>
+                            </form>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+
+            <h4 class="text-end mt-3">
+                Total:
+                <strong>${{ "%.2f"|format(total) }}</strong>
+            </h4>
+
+            <button class="btn btn-success w-100 mt-3" type="submit">
+                Checkout
+            </button>
+        </form>
+    {% else %}
+        <p>Your cart is empty.</p>
+    {% endif %}
+</div>
+{% endblock %}

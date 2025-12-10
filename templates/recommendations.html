@@ -1,0 +1,31 @@
+{% extends "layout.html" %}
+{% block title %}Recommended for You{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+
+    <h2 class="mb-3">Recommended for You</h2>
+
+    {% if recommended %}
+    <div class="row row-cols-1 row-cols-md-4 g-4">
+        {% for b in recommended %}
+        <div class="col">
+            <div class="card h-100 shadow-sm">
+                <img src="{{ b.cover_url }}" class="card-img-top" alt="{{ b.title }}">
+                <div class="card-body">
+                    <h5 class="card-title">{{ b.title }}</h5>
+                    <p class="text-muted small">{{ b.author }}</p>
+                    <p class="small">Score: {{ "%.2f"|format(b.score) }}</p>
+                    <a href="{{ url_for('ui.book_detail', book_id=b.id) }}"
+                       class="btn btn-dark btn-sm w-100 mt-2">View Book</a>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+        <p>No recommendations yet. Read some books to generate personalized suggestions!</p>
+    {% endif %}
+
+</div>
+{% endblock %}

@@ -1,1 +1,88 @@
-<!doctype html><html><head><meta charset='utf-8'><title>Polyglot Demo</title><link rel='stylesheet' href='/static/style.css'></head><body><header><h1>Polyglot E-Book Demo</h1></header><main><a href='/signup'>Sign Up</a> | <a href='/login'>Log In</a> | <a href='/dashboard'>Dashboard</a></main></body></html>
+<!-- templates/index.html -->
+{% extends "layout.html" %}
+{% block content %}
+
+<div class="container mt-4">
+
+    <h2 class="mb-4">Welcome back{% if current_user %}, {{ current_user.username }}{% endif %}!</h2>
+
+    {% if recs %}
+    <h3 class="mb-3">Recommended For You</h3>
+
+    <div id="recCarousel" class="carousel slide" data-bs-ride="carousel">
+        <div class="carousel-inner">
+
+            {% for chunk in recs|batch(4) %}
+            <div class="carousel-item {% if loop.first %}active{% endif %}">
+                <div class="row row-cols-1 row-cols-md-4 g-4">
+
+                    {% for b in chunk %}
+                    <div class="col">
+                        <a href="{{ url_for('ui.book_detail', book_id=b.id) }}" class="text-decoration-none text-dark">
+                            <div class="card shadow-sm h-100">
+                                <img src="{{ b.cover_url }}" class="card-img-top" alt="{{ b.title }}">
+                                <div class="card-body">
+                                    <h5 class="card-title">{{ b.title }}</h5>
+                                    <p class="text-muted small">{{ b.author }}</p>
+                                </div>
+                            </div>
+                        </a>
+                    </div>
+                    {% endfor %}
+
+                </div>
+            </div>
+            {% endfor %}
+
+        </div>
+        <button class="carousel-control-prev" type="button" data-bs-target="#recCarousel" data-bs-slide="prev">
+            <span class="carousel-control-prev-icon"></span>
+        </button>
+        <button class="carousel-control-next" type="button" data-bs-target="#recCarousel" data-bs-slide="next">
+            <span class="carousel-control-next-icon"></span>
+        </button>
+    </div>
+
+    {% else %}
+        <p class="text-muted">Read some books to generate personalized recommendations!</p>
+    {% endif %}
+
+</div>
+
+<h2 class="mb-4">🔥 Popular Books</h2>
+
+<div class="row">
+    {% for b in popular_books %}
+    <div class="col-md-4 mb-4">
+        <div class="card shadow-sm">
+
+            {% if b.cover_url %}
+            <img src="{{ b.cover_url }}" class="card-img-top" style="height: 280px; object-fit: cover;">
+            {% else %}
+            <div class="bg-secondary text-white text-center py-5">No Cover</div>
+            {% endif %}
+
+            <div class="card-body">
+                <h5 class="card-title">{{ b.title }}</h5>
+                <p class="card-text text-muted">{{ b.author }}</p>
+
+                <p class="card-text">
+                    ⭐ {{ b.rating.avg }} ({{ b.rating.count }})
+                </p>
+
+                {% if current_user %}
+                <a href="{{ url_for('ui.book_detail', book_id=b.id) }}" class="btn btn-primary w-100">
+                    View Book
+                </a>
+                {% else %}
+                <a href="{{ url_for('ui.login') }}" class="btn btn-secondary w-100">
+                    Login to Read
+                </a>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+{% endblock %}

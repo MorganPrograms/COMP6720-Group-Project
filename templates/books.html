@@ -1,0 +1,40 @@
+<!-- templates/books.html -->
+{% extends "layout.html" %}
+{% block content %}
+
+<h2 class="mb-4">All Books</h2>
+
+<div class="row">
+    {% for b in books %}
+    <div class="col-md-4 mb-4">
+        <div class="card shadow-sm">
+
+            {% if b.cover_url %}
+            <img src="{{ b.cover_url }}" class="card-img-top" style="height: 260px; object-fit: cover;">
+            {% else %}
+            <div class="bg-secondary text-white text-center py-5">No Cover</div>
+            {% endif %}
+
+            <div class="card-body">
+                <h5 class="card-title">{{ b.title }}</h5>
+                <p class="card-text text-muted">{{ b.author }}</p>
+
+                <p class="card-text">
+                    ⭐ {{ b.rating.avg }} ({{ b.rating.count }})<br>
+                    <small>Age {{ b.age_rating }}+</small>
+                </p>
+
+                {% if b.premium_only %}
+                <span class="badge bg-warning text-dark mb-2">Premium Only</span>
+                {% endif %}
+
+                <a href="{{ url_for('ui.book_detail', book_id=b.id) }}" class="btn btn-primary w-100">
+                    View Details
+                </a>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+{% endblock %}

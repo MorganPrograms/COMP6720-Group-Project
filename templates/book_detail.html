@@ -1,0 +1,97 @@
+<!-- templates/book_detail.html -->
+{% extends "layout.html" %}
+{% block content %}
+
+<div class="row">
+    <div class="col-md-4">
+
+        {% if book.cover_url %}
+        <img src="{{ book.cover_url }}" class="img-fluid rounded shadow-sm mb-3">
+        {% else %}
+        <div class="bg-secondary text-white text-center py-5 rounded mb-3">No Cover</div>
+        {% endif %}
+
+    </div>
+
+    <div class="col-md-8">
+
+        <h2>{{ book.title }}</h2>
+        <h5 class="text-muted">{{ book.author }}</h5>
+
+        <p>
+            ⭐ {{ book.rating.avg }} ({{ book.rating.count }})<br>
+            <strong>Price:</strong> ${{ book.price }}
+        </p>
+
+        {% if locked %}
+        <div class="alert alert-warning">
+            This book is available to <strong>PREMIUM</strong> users only.
+        </div>
+        {% endif %}
+
+        {% if age_rating > 0 %}
+        <div class="alert alert-info">
+            Age restriction: <strong>{{ age_rating }}+</strong>
+        </div>
+        {% endif %}
+
+     <form method="POST" action="{{ url_for('ui.cart_add', book_id=book.mongo_id) }}" class="mb-3">
+        <label class="form-label">Choose format</label>
+        <select name="mode" class="form-select">
+            <option value="RENT">Rent (40% of ebook price)</option>
+            <option value="DIGITAL">Buy Ebook (Full Price)</option>
+            <option value="HARDCOVER">Buy Hardcover (+50%)</option>
+        </select>
+        <button class="btn btn-dark w-100 mt-2">Add to Cart</button>
+    </form>
+
+
+        <hr>
+
+        <h4>Rate this Book</h4>
+<form action="{{ url_for('ui.ui_rate_book', book_id=book.mongo_id) }}" method="POST">
+
+            <select name="rating" class="form-select mb-3" required>
+                <option value="">Select rating</option>
+                {% for s in [1,2,3,4,5] %}
+                <option value="{{ s }}">{{ s }} Star{{ 's' if s > 1 }}</option>
+                {% endfor %}
+            </select>
+            <button class="btn btn-outline-primary w-100">Submit Rating</button>
+        </form>
+
+        <hr>
+
+        <h4>Read Book</h4>
+        <a href="{{ url_for('ui.read', book_id=book.mongo_id) }}" class="btn btn-dark w-100">
+            Open Reader
+        </a>
+
+    </div>
+</div>
+
+<hr class="my-4">
+
+<!-- COMMENTS -->
+<h3>Comments</h3>
+
+<form action="{{ url_for('ui.ui_comment_book', book_id=book.mongo_id) }}" method="POST">
+    <textarea name="content" class="form-control" placeholder="Write a comment..." required></textarea>
+    <button class="btn btn-primary mt-2">Post Comment</button>
+</form>
+
+<div class="list-group">
+    {% for c in comments %}
+    <div class="list-group-item mb-2 shadow-sm">
+        <strong>{{ c.username }}</strong>  
+        <small class="text-muted">{{ c.created_at }}</small>
+        <p class="mt-2 mb-0">{{ c.content }}</p>
+    </div>
+    {% endfor %}
+
+    {% if comments|length == 0 %}
+    <p class="text-muted">No comments yet.</p>
+    {% endif %}
+</div>
+
+{% endblock %}

@@ -1,0 +1,107 @@
+<!-- templates/layout.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>{{ title or "Polyglot E-Library" }}</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <!-- Bootstrap 5 -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+
+</head>
+<body class="bg-light">
+
+<nav class="navbar navbar-expand-lg navbar-dark bg-dark mb-4">
+    <div class="container-fluid">
+
+        <a class="navbar-brand" href="{{ url_for('ui.index') }}">📚 Polyglot E-Library</a>
+
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navMenu">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+
+        <div id="navMenu" class="collapse navbar-collapse">
+            <ul class="navbar-nav me-auto">
+
+                {% if current_user %}
+                <li class="nav-item">
+                    <a class="nav-link" href="{{ url_for('ui.books') }}">Books</a>
+                </li>
+
+                <li class="nav-item">
+                    <a class="nav-link" href="{{ url_for('ui.cart') }}">Cart</a>
+                </li>
+
+                {% if current_user.status == "PREMIUM" %}
+                <li class="nav-item">
+                    <span class="badge bg-warning text-dark mt-2 ms-2">PREMIUM</span>
+                </li>
+                {% endif %}
+
+                {% endif %}
+
+                {% if current_user and current_user.id in ADMIN_USER_IDS %}
+                <li class="nav-item">
+                    <a class="nav-link text-danger fw-bold" href="{{ url_for('ui.admin_dashboard') }}">Admin</a>
+                </li>
+                {% endif %}
+            </ul>
+
+            <ul class="navbar-nav ms-auto">
+                {% if current_user %}
+                <li class="nav-item">
+                    <span class="navbar-text me-3">Hello, {{ current_user.username }}</span>
+                </li>
+
+                <li class="nav-item">
+                    <a class="nav-link" href="{{ url_for('ui.profile') }}">Profile</a>
+                </li>
+
+                <li class="nav-item">
+                    <a class="nav-link text-warning" href="{{ url_for('ui.logout') }}">Logout</a>
+                </li>
+
+                {% else %}
+
+                <li class="nav-item">
+                    <a class="nav-link" href="{{ url_for('ui.login') }}">Login</a>
+                </li>
+
+                <li class="nav-item">
+                    <a class="nav-link" href="{{ url_for('ui.register') }}">Register</a>
+                </li>
+
+                {% endif %}
+            </ul>
+        </div>
+
+    </div>
+</nav>
+
+<div class="container">
+
+    <!-- Flash messages -->
+    {% with msgs = get_flashed_messages(with_categories=True) %}
+      {% if msgs %}
+      <div class="mb-3">
+        {% for category, msg in msgs %}
+        <div class="alert alert-{{ category }} alert-dismissible fade show">
+            {{ msg }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+        {% endfor %}
+      </div>
+      {% endif %}
+    {% endwith %}
+
+    {% block content %}{% endblock %}
+
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+
+</body>
+</html>

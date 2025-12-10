@@ -1,0 +1,30 @@
+/* static/css/style.css */
+
+body {
+    font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+.navbar-brand {
+    font-weight: 600;
+}
+
+.card {
+    border-radius: 0.5rem;
+}
+
+.card img {
+    border-top-left-radius: 0.5rem;
+    border-top-right-radius: 0.5rem;
+}
+
+.table thead th {
+    white-space: nowrap;
+}
+
+.alert {
+    border-radius: 0.5rem;
+}
+
+.btn {
+    border-radius: 0.5rem;
+}
